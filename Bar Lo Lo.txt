@@ -1,0 +1,144 @@
+# Recreate the .zip file after environment reset
+from zipfile import ZipFile
+import os
+
+# Create folder structure
+os.makedirs('barlolo/src', exist_ok=True)
+
+# Define the contents
+files = {
+    'barlolo/index.html': '''<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bar Lo Lo</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="src/styles.css">
+</head>
+<body>
+  <header>
+    <h1>Bar Lo Lo</h1>
+    <p>Shop the Unexpected!</p>
+  </header>
+  <main id="product-list">
+    <!-- Product Cards -->
+  </main>
+  <script src="src/app.js"></script>
+</body>
+</html>''',
+    'barlolo/manifest.json': '''{
+  "name": "Bar Lo Lo",
+  "short_name": "BarLoLo",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ff6f61",
+  "icons": [
+    {
+      "src": "src/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}''',
+    'barlolo/service-worker.js': '''self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open('barlolo-cache').then(cache => {
+      return cache.addAll([
+        '/',
+        '/index.html',
+        '/manifest.json',
+        '/src/styles.css',
+        '/src/app.js',
+        '/products.json'
+      ]);
+    })
+  );
+});
+
+self.addEventListener('fetch', event => {
+  event.respondWith(
+    caches.match(event.request).then(response => {
+      return response || fetch(event.request);
+    })
+  );
+});''',
+    'barlolo/products.json': '''[
+  {
+    "id": 1,
+    "name": "Cool Hat",
+    "price": "15.00",
+    "image": "src/hat.jpg"
+  },
+  {
+    "id": 2,
+    "name": "Chic Sunglasses",
+    "price": "25.00",
+    "image": "src/sunglasses.jpg"
+  }
+]''',
+    'barlolo/src/styles.css': '''body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background: #fff9f5;
+  color: #333;
+}
+
+header {
+  background: #ff6f61;
+  color: white;
+  padding: 20px;
+  text-align: center;
+}
+
+#product-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 20px;
+  padding: 20px;
+}
+
+.product-card {
+  background: white;
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  transition: transform 0.3s;
+}
+
+.product-card:hover {
+  transform: scale(1.05);
+}''',
+    'barlolo/src/app.js': '''fetch('products.json')
+  .then(response => response.json())
+  .then(products => {
+    const productList = document.getElementById('product-list');
+    products.forEach(product => {
+      const card = document.createElement('div');
+      card.className = 'product-card';
+      card.innerHTML = `
+        <img src="${product.image}" alt="${product.name}" width="100%">
+        <h3>${product.name}</h3>
+        <p>$${product.price}</p>
+      `;
+      productList.appendChild(card);
+    });
+  });'''
+}
+
+# Write the files
+for path, content in files.items():
+    with open(path, 'w', encoding='utf-8') as f:
+        f.write(content)
+
+# Zip the folder
+zip_filename = '/mnt/data/barlolo.zip'
+with ZipFile(zip_filename, 'w') as zipf:
+    for foldername, subfolders, filenames in os.walk('barlolo'):
+        for filename in filenames:
+            filepath = os.path.join(foldername, filename)
+            zipf.write(filepath, arcname=os.path.relpath(filepath, 'barlolo'))
+
+zip_filename
